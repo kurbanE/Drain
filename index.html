@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drain Operasyon Merkezi V6</title>
+    <title>Drain Operasyon Merkezi V7</title>
     <link rel="manifest" href="manifest.json">
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 15px; color: #333; margin:0; }
@@ -26,9 +26,10 @@
         tr.conflict { background-color: #fff0f0; color: #d32f2f; } 
         tr.unselected { opacity: 0.4; background: #fafafa; } 
 
-        .type-a32 { color: blue; font-weight: bold; }
-        .type-a33 { color: red; font-weight: bold; }
-        .type-b7 { color: black; font-weight: bold; }
+        /* Renk Kodları */
+        .type-a32 { color: blue; font-weight: bold; } /* A319, A320, A321 */
+        .type-a33 { color: red; font-weight: bold; }  /* A330, A350 */
+        .type-b7 { color: black; font-weight: bold; } /* Boeingler */
 
         .person-input-group { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
         .person-input { padding: 8px; border: 1px solid #1a73e8; border-radius: 4px; flex: 1; min-width: 120px; }
@@ -135,8 +136,10 @@
             if (regMatch) {
                 let reg = regMatch[0].replace("-", "").toLowerCase();
                 let type = "";
-                if (i > 0 && lines[i-1].match(/A32|A33|A35|B7/i)) type = lines[i-1];
-                if (!type && line.match(/A32|A33|A35|B7/i)) type = line;
+                // A31 eklendi
+                if (i > 0 && lines[i-1].match(/A31|A32|A33|A35|B7/i)) type = lines[i-1];
+                if (!type && line.match(/A31|A32|A33|A35|B7/i)) type = line;
+                
                 let isNeg = false;
                 for(let j=i; j<Math.min(i+20, lines.length); j++) {
                     if(lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
@@ -191,7 +194,9 @@
             }
             row.currentDrain = drainTime;
             const typeStr = acDb[row.reg] || "";
-            const typeClass = typeStr.includes("A32") ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            // A31 veya A32 içeriyorsa Mavi yap
+            const typeClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            
             html += `<tr class="${!row.selected ? 'unselected' : (drainTime === '' ? 'conflict' : '')}">
                 <td><input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRow(${idx})"></td>
                 <td class="${typeClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
@@ -220,8 +225,11 @@
         selectedRows.forEach((row, i) => {
             const pName = pNames[i % pNames.length];
             const typeStr = acDb[row.reg] || "";
-            let tClass = typeStr.includes("A32") ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            // Mantık Güncellemesi: A31/A32 Dar gövde Mavi, Diğer A3'ler Geniş gövde Kırmızı
+            let tClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            
             if (typeStr.includes("A3")) airbusCount++; else boeingCount++;
+            
             finalData.push({...row, pName, tClass});
             html += `<tr><td>${row.park}</td><td class="${tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
                 <td>${row.dep}</td><td style="font-weight:bold; color:#2e7d32">${row.currentDrain}</td>
@@ -243,10 +251,9 @@
         window.scrollTo({ top: document.getElementById('finalSection').offsetTop, behavior: 'smooth' });
     }
 
-    // PWA Servis Kaydı (Dosya ismi sw.js olmalı)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW hatası:', err));
+            navigator.worker.register('sw.js').catch(err => console.log('SW hatası:', err));
         });
     }
 </script>
