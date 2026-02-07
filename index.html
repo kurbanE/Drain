@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drain Operasyon Merkezi V6</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 15px; color: #333; margin:0; }
+        .container { max-width: 1200px; margin: auto; }
+        .section { background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2, h3 { margin-top: 0; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; font-size: 1.1em; }
+        
+        .grid-inputs { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 768px) { .grid-inputs { grid-template-columns: 1fr 1fr; } }
+
+        .btn-mini { padding: 5px 10px; font-size: 12px; margin-bottom: 5px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+        textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; box-sizing: border-box; font-family: monospace; font-size: 13px; }
+        
+        #ttmsOutput { background: #e8f0fe; color: #1a73e8; font-weight: bold; border: 1px solid #1a73e8; margin-top: 10px; height: 50px; width: 100%; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: white; }
+        th, td { border: 1px solid #eee; padding: 8px; text-align: center; }
+        th { background: #f8f9fa; color: #555; }
+        
+        tr.conflict { background-color: #fff0f0; color: #d32f2f; } 
+        tr.unselected { opacity: 0.4; background: #fafafa; } 
+
+        .type-a32 { color: blue; font-weight: bold; }
+        .type-a33 { color: red; font-weight: bold; }
+        .type-b7 { color: black; font-weight: bold; }
+
+        .person-input-group { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
+        .person-input { padding: 8px; border: 1px solid #1a73e8; border-radius: 4px; flex: 1; min-width: 120px; }
+        
+        .final-list { border: 2px solid #34a853; background: #fafffa !important; }
+        .alpha-list { border: 2px solid #ff9800; background: #fffcf5 !important; }
+        
+        .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; background: #1a73e8; color: white; }
+        .summary-box { margin-top: 10px; padding: 10px; background: #eef7ee; border-radius: 6px; border: 1px solid #c8e6c9; font-size: 14px; }
+
+        button { cursor: pointer; padding: 12px; border-radius: 4px; border: none; font-weight: bold; transition: 0.3s; width: 100%; margin-top: 5px; }
+        .btn-blue { background: #1a73e8; color: white; }
+        .btn-green { background: #34a853; color: white; }
+
+        @media print { .no-print { display: none; } .final-list, .alpha-list { border: none; box-shadow: none; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="section no-print">
+        <h2>1️⃣ Veri Girişi</h2>
+        <div class="grid-inputs">
+            <div>
+                <div style="display:flex; justify-content: space-between;">
+                    <strong>TTMS Verisi:</strong>
+                    <div>
+                        <button class="btn-mini" onclick="pasteTo('ttmsInput')">📋 Yapıştır</button>
+                        <button class="btn-mini" onclick="clearInput('ttmsInput')">🗑️ Sil</button>
+                    </div>
+                </div>
+                <textarea id="ttmsInput" placeholder="TTMS verisini yapıştırın..."></textarea>
+                <button class="btn-blue" onclick="analyzeTTMS()">Analiz Et</button>
+            </div>
+            <div>
+                <div style="display:flex; justify-content: space-between;">
+                    <strong>Atom Tablosu:</strong>
+                    <div>
+                        <button class="btn-mini" onclick="pasteTo('atomInput')">📋 Yapıştır</button>
+                        <button class="btn-mini" onclick="clearInput('atomInput')">🗑️ Sil</button>
+                    </div>
+                </div>
+                <textarea id="atomInput" placeholder="Atom tablosunu yapıştırın..."></textarea>
+                <button class="btn-green" onclick="renderDraft()">Havuz Oluştur</button>
+            </div>
+        </div>
+        <div id="outputArea" style="display:none;">
+            <p style="font-size:12px; margin:10px 0 5px 0;"><strong>Filtre Listesi (Tıkla Kopyala):</strong></p>
+            <textarea id="ttmsOutput" readonly onclick="copyOutput()"></textarea>
+        </div>
+    </div>
+
+    <div class="section no-print" id="draftSection" style="display:none;">
+        <h3>2️⃣ Planlama Havuzu</h3>
+        <div id="draftTableResult" style="overflow-x:auto;"></div>
+    </div>
+
+    <div class="section no-print" id="personnelSection" style="display:none;">
+        <h3>3️⃣ Personel Atama</h3>
+        <div class="person-input-group">
+            <select id="pCount" onchange="generatePersonInputs()" style="padding: 8px; border-radius:4px;">
+                <option value="1">1 Personel</option><option value="2">2 Personel</option>
+                <option value="3">3 Personel</option><option value="4">4 Personel</option>
+            </select>
+            <div id="personInputs" style="display:flex; gap:5px; flex-wrap:wrap; flex:1;"></div>
+        </div>
+        <button class="btn-green" onclick="finalizePlan()">KESİN LİSTEYİ OLUŞTUR</button>
+    </div>
+
+    <div class="section final-list" id="finalSection" style="display:none;">
+        <h2 style="color: #2e7d32; border-bottom:1px solid #34a853;">📋 GÖREV LİSTESİ (Zaman)</h2>
+        <div id="finalTableResult" style="overflow-x:auto;"></div>
+        <div id="fleetSummary" class="summary-box"></div>
+        <button class="no-print" onclick="window.print()" style="background:#555; color:white; margin-top:10px;">🖨️ Yazdır / PDF</button>
+    </div>
+
+    <div class="section alpha-list" id="alphaSection" style="display:none;">
+        <h2 style="color: #e65100; border-bottom:1px solid #ff9800;">🔤 KAYIT LİSTESİ (Alfabetik)</h2>
+        <div id="alphaTableResult" style="overflow-x:auto;"></div>
+    </div>
+</div>
+
+<script>
+    let acDb = {}; let atomRows = [];
+
+    async function pasteTo(id) {
+        try { const text = await navigator.clipboard.readText(); document.getElementById(id).value = text; } 
+        catch (err) { alert("PWA/HTTPS modunda aktif olur. Şimdilik manuel yapıştırın."); }
+    }
+    function clearInput(id) { document.getElementById(id).value = ""; }
+    function copyOutput() {
+        const copyText = document.getElementById("ttmsOutput");
+        copyText.select(); document.execCommand("copy");
+        alert("Kopyalandı!");
+    }
+
+    function analyzeTTMS() {
+        const input = document.getElementById('ttmsInput').value;
+        const lines = input.split('\n');
+        acDb = {}; let regs = [];
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            let regMatch = line.match(/TC-?[A-Z]{3}/i);
+            if (regMatch) {
+                let reg = regMatch[0].replace("-", "").toLowerCase();
+                let type = "";
+                if (i > 0 && lines[i-1].match(/A32|A33|A35|B7/i)) type = lines[i-1];
+                if (!type && line.match(/A32|A33|A35|B7/i)) type = line;
+                let isNeg = false;
+                for(let j=i; j<Math.min(i+20, lines.length); j++) {
+                    if(lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
+                }
+                if (isNeg) {
+                    acDb[reg] = type.toUpperCase();
+                    if(!regs.includes(reg)) regs.push(reg);
+                }
+            }
+        }
+        document.getElementById('ttmsOutput').value = regs.join(', ');
+        document.getElementById('outputArea').style.display = 'block';
+    }
+
+    function toMin(t) { const p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); }
+    function toTime(m) { return String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0'); }
+
+    function renderDraft() {
+        const raw = document.getElementById('atomInput').value;
+        const lines = raw.split('\n');
+        atomRows = []; let seen = new Set();
+        for (let line of lines) {
+            const cols = line.trim().split(/\t/);
+            if (cols.length < 4) continue;
+            let reg = "", depTime = "", park = cols[2] || "-";
+            for (let c of cols) {
+                if (c.match(/TC-?[A-Z]{3}/i)) reg = c.replace("-", "").toLowerCase();
+                if (c.match(/^\d{2}:\d{2}$/)) depTime = c;
+            }
+            if (reg && depTime && !seen.has(reg)) {
+                seen.add(reg);
+                atomRows.push({ park, reg, dep: depTime, depMin: toMin(depTime), selected: true });
+            }
+        }
+        calculateTimes();
+        document.getElementById('draftSection').style.display = 'block';
+        document.getElementById('personnelSection').style.display = 'block';
+        generatePersonInputs();
+    }
+
+    function calculateTimes() {
+        let usedSlots = [];
+        let html = `<table><tr><th>Seç</th><th>Uçak</th><th>Kalkış</th><th>Drain</th></tr>`;
+        atomRows.forEach((row, idx) => {
+            let drainTime = "";
+            if (row.selected) {
+                let start = Math.floor((row.depMin - 60) / 10) * 10;
+                let end = Math.floor((row.depMin - 30) / 10) * 10;
+                for (let t = start; t <= end; t += 10) {
+                    if (!usedSlots.includes(t)) { drainTime = toTime(t); usedSlots.push(t); break; }
+                }
+            }
+            row.currentDrain = drainTime;
+            const typeStr = acDb[row.reg] || "";
+            const typeClass = typeStr.includes("A32") ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            html += `<tr class="${!row.selected ? 'unselected' : (drainTime === '' ? 'conflict' : '')}">
+                <td><input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRow(${idx})"></td>
+                <td class="${typeClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
+                <td>${row.dep}</td><td>${drainTime || "Slot Yok"}</td></tr>`;
+        });
+        document.getElementById('draftTableResult').innerHTML = html + "</table>";
+    }
+
+    function toggleRow(idx) { atomRows[idx].selected = !atomRows[idx].selected; calculateTimes(); }
+
+    function generatePersonInputs() {
+        const count = document.getElementById('pCount').value;
+        let html = "";
+        for (let i = 0; i < count; i++) {
+            html += `<input type="text" class="person-input" id="pName${i}" placeholder="${i+1}. İsim" value="P${i+1}">`;
+        }
+        document.getElementById('personInputs').innerHTML = html;
+    }
+
+    function finalizePlan() {
+        const pNames = Array.from(document.querySelectorAll('.person-input')).map(i => i.value || "İsimsiz");
+        const selectedRows = atomRows.filter(r => r.selected && r.currentDrain !== "");
+        let airbusCount = 0, boeingCount = 0, finalData = [];
+
+        let html = `<table><tr><th>Park</th><th>Uçak</th><th>Kalkış</th><th>Drain</th><th>Personel</th></tr>`;
+        selectedRows.forEach((row, i) => {
+            const pName = pNames[i % pNames.length];
+            const typeStr = acDb[row.reg] || "";
+            let tClass = typeStr.includes("A32") ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
+            if (typeStr.includes("A3")) airbusCount++; else boeingCount++;
+            finalData.push({...row, pName, tClass});
+            html += `<tr><td>${row.park}</td><td class="${tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
+                <td>${row.dep}</td><td style="font-weight:bold; color:#2e7d32">${row.currentDrain}</td>
+                <td><span class="badge">${pName}</span></td></tr>`;
+        });
+        document.getElementById('finalTableResult').innerHTML = html + "</table>";
+
+        const alphaRows = [...finalData].sort((a, b) => a.reg.localeCompare(b.reg));
+        let alphaHtml = `<table><tr><th>Uçak (Reg)</th><th>Drain</th><th>Personel</th></tr>`;
+        alphaRows.forEach(row => {
+            alphaHtml += `<tr><td class="${row.tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
+                <td style="font-weight:bold;">${row.currentDrain}</td><td>${row.pName}</td></tr>`;
+        });
+        document.getElementById('alphaTableResult').innerHTML = alphaHtml + "</table>";
+                
+        document.getElementById('fleetSummary').innerHTML = `<span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span>`;
+        document.getElementById('finalSection').style.display = 'block';
+        document.getElementById('alphaSection').style.display = 'block';
+        window.scrollTo({ top: document.getElementById('finalSection').offsetTop, behavior: 'smooth' });
+    }
+
+    // PWA Servis Kaydı (Dosya ismi sw.js olmalı)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW hatası:', err));
+        });
+    }
+</script>
+</body>
+</html>
