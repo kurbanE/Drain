@@ -1,4 +1,4 @@
-const cacheName = 'drain-v7';
+const cacheName = 'drain-v8';
 const assets = ['./', './index.html', './manifest.json', './drain.ico'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(cacheName).then(cache => cache.addAll(assets)));
