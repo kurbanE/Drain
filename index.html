@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Drain Operasyon Merkezi V7.1</title>
     <link rel="manifest" href="manifest.json">
     <style>
@@ -268,6 +271,26 @@
         document.getElementById('fleetSummary').innerHTML = `<span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span>`;
         document.getElementById('finalSection').style.display = 'block';
         document.getElementById('alphaSection').style.display = 'block';
+    }
+
+    // Service Worker kaydı ve otomatik güncelleme
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            // Yeni güncelleme varsa otomatik yükle
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // Yeni sürüm hazır, sayfayı yenile
+                        if (confirm('Yeni versiyon mevcut! Sayfayı yenilemek ister misiniz?')) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            });
+            // Varolan güncelleme kontrolü
+            reg.update();
+        });
     }
 </script>
 </body>
