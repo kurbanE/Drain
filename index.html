@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drain Operasyon Merkezi V7</title>
+    <title>Drain Operasyon Merkezi V7.1</title>
     <link rel="manifest" href="manifest.json">
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 15px; color: #333; margin:0; }
@@ -26,10 +26,9 @@
         tr.conflict { background-color: #fff0f0; color: #d32f2f; } 
         tr.unselected { opacity: 0.4; background: #fafafa; } 
 
-        /* Renk Kodları */
-        .type-a32 { color: blue; font-weight: bold; } /* A319, A320, A321 */
-        .type-a33 { color: red; font-weight: bold; }  /* A330, A350 */
-        .type-b7 { color: black; font-weight: bold; } /* Boeingler */
+        .type-a32 { color: blue; font-weight: bold; } 
+        .type-a33 { color: red; font-weight: bold; }  
+        .type-b7 { color: black; font-weight: bold; } 
 
         .person-input-group { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
         .person-input { padding: 8px; border: 1px solid #1a73e8; border-radius: 4px; flex: 1; min-width: 120px; }
@@ -44,10 +43,29 @@
         .btn-blue { background: #1a73e8; color: white; }
         .btn-green { background: #34a853; color: white; }
 
-        @media print { .no-print { display: none; } .final-list, .alpha-list { border: none; box-shadow: none; } }
+        /* YÜZEN SAYAÇ STİLİ */
+        #floatingCounter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1a73e8;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            border: 2px solid white;
+            font-size: 16px;
+        }
+
+        @media print { .no-print { display: none; } .final-list, .alpha-list { border: none; box-shadow: none; } #floatingCounter { display: none !important; } }
     </style>
 </head>
 <body>
+
+<div id="floatingCounter">Seçili: 0</div>
 
 <div class="container">
     <div class="section no-print">
@@ -117,7 +135,7 @@
 
     async function pasteTo(id) {
         try { const text = await navigator.clipboard.readText(); document.getElementById(id).value = text; } 
-        catch (err) { alert("PWA/HTTPS modunda aktif olur. Şimdilik manuel yapıştırın."); }
+        catch (err) { alert("Manuel yapıştırın."); }
     }
     function clearInput(id) { document.getElementById(id).value = ""; }
     function copyOutput() {
@@ -136,18 +154,13 @@
             if (regMatch) {
                 let reg = regMatch[0].replace("-", "").toLowerCase();
                 let type = "";
-                // A31 eklendi
                 if (i > 0 && lines[i-1].match(/A31|A32|A33|A35|B7/i)) type = lines[i-1];
                 if (!type && line.match(/A31|A32|A33|A35|B7/i)) type = line;
-                
                 let isNeg = false;
                 for(let j=i; j<Math.min(i+20, lines.length); j++) {
-                    if(lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
+                    if(lines[j] && lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
                 }
-                if (isNeg) {
-                    acDb[reg] = type.toUpperCase();
-                    if(!regs.includes(reg)) regs.push(reg);
-                }
+                if (isNeg) { acDb[reg] = type.toUpperCase(); if(!regs.includes(reg)) regs.push(reg); }
             }
         }
         document.getElementById('ttmsOutput').value = regs.join(', ');
@@ -156,6 +169,15 @@
 
     function toMin(t) { const p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); }
     function toTime(m) { return String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0'); }
+
+    // SAYAÇ GÜNCELLEME (Slotu olmayanları saymaz)
+    function updateCounter() {
+        const count = atomRows.filter(r => r.selected && r.currentDrain !== "").length;
+        const counterEl = document.getElementById('floatingCounter');
+        counterEl.style.display = 'block';
+        counterEl.innerText = `Seçili: ${count} / 29`;
+        counterEl.style.background = (count >= 29) ? "#34a853" : "#1a73e8";
+    }
 
     function renderDraft() {
         const raw = document.getElementById('atomInput').value;
@@ -167,7 +189,8 @@
             let reg = "", depTime = "", park = cols[2] || "-";
             for (let c of cols) {
                 if (c.match(/TC-?[A-Z]{3}/i)) reg = c.replace("-", "").toLowerCase();
-                if (c.match(/^\d{2}:\d{2}$/)) depTime = c;
+                // YILDIZLI SAAT DÜZENLEMESİ
+                if (c.match(/^\d{2}:\d{2}\*?$/)) depTime = c.replace('*', '');
             }
             if (reg && depTime && !seen.has(reg)) {
                 seen.add(reg);
@@ -178,6 +201,7 @@
         document.getElementById('draftSection').style.display = 'block';
         document.getElementById('personnelSection').style.display = 'block';
         generatePersonInputs();
+        updateCounter();
     }
 
     function calculateTimes() {
@@ -194,9 +218,7 @@
             }
             row.currentDrain = drainTime;
             const typeStr = acDb[row.reg] || "";
-            // A31 veya A32 içeriyorsa Mavi yap
             const typeClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
-            
             html += `<tr class="${!row.selected ? 'unselected' : (drainTime === '' ? 'conflict' : '')}">
                 <td><input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRow(${idx})"></td>
                 <td class="${typeClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
@@ -205,13 +227,17 @@
         document.getElementById('draftTableResult').innerHTML = html + "</table>";
     }
 
-    function toggleRow(idx) { atomRows[idx].selected = !atomRows[idx].selected; calculateTimes(); }
+    function toggleRow(idx) { 
+        atomRows[idx].selected = !atomRows[idx].selected; 
+        calculateTimes(); 
+        updateCounter();
+    }
 
     function generatePersonInputs() {
         const count = document.getElementById('pCount').value;
         let html = "";
         for (let i = 0; i < count; i++) {
-            html += `<input type="text" class="person-input" id="pName${i}" placeholder="${i+1}. İsim" value="P${i+1}">`;
+            html += `<input type="text" class="person-input" id="pName${i}" value="P${i+1}">`;
         }
         document.getElementById('personInputs').innerHTML = html;
     }
@@ -220,41 +246,28 @@
         const pNames = Array.from(document.querySelectorAll('.person-input')).map(i => i.value || "İsimsiz");
         const selectedRows = atomRows.filter(r => r.selected && r.currentDrain !== "");
         let airbusCount = 0, boeingCount = 0, finalData = [];
-
         let html = `<table><tr><th>Park</th><th>Uçak</th><th>Kalkış</th><th>Drain</th><th>Personel</th></tr>`;
         selectedRows.forEach((row, i) => {
             const pName = pNames[i % pNames.length];
             const typeStr = acDb[row.reg] || "";
-            // Mantık Güncellemesi: A31/A32 Dar gövde Mavi, Diğer A3'ler Geniş gövde Kırmızı
             let tClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
-            
             if (typeStr.includes("A3")) airbusCount++; else boeingCount++;
-            
             finalData.push({...row, pName, tClass});
             html += `<tr><td>${row.park}</td><td class="${tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
                 <td>${row.dep}</td><td style="font-weight:bold; color:#2e7d32">${row.currentDrain}</td>
                 <td><span class="badge">${pName}</span></td></tr>`;
         });
         document.getElementById('finalTableResult').innerHTML = html + "</table>";
-
         const alphaRows = [...finalData].sort((a, b) => a.reg.localeCompare(b.reg));
-        let alphaHtml = `<table><tr><th>Uçak (Reg)</th><th>Drain</th><th>Personel</th></tr>`;
+        let alphaHtml = `<table><tr><th>Uçak</th><th>Drain</th><th>Personel</th></tr>`;
         alphaRows.forEach(row => {
             alphaHtml += `<tr><td class="${row.tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
                 <td style="font-weight:bold;">${row.currentDrain}</td><td>${row.pName}</td></tr>`;
         });
         document.getElementById('alphaTableResult').innerHTML = alphaHtml + "</table>";
-                
         document.getElementById('fleetSummary').innerHTML = `<span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span>`;
         document.getElementById('finalSection').style.display = 'block';
         document.getElementById('alphaSection').style.display = 'block';
-        window.scrollTo({ top: document.getElementById('finalSection').offsetTop, behavior: 'smooth' });
-    }
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.worker.register('sw.js').catch(err => console.log('SW hatası:', err));
-        });
     }
 </script>
 </body>
