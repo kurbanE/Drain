@@ -288,8 +288,8 @@
                     }
                 });
             });
-            // Varolan güncelleme kontrolü
-            reg.update();
+        }).catch(err => {
+            console.warn('Service Worker kaydı başarısız:', err);
         });
     }
 </script>

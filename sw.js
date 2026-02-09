@@ -16,10 +16,11 @@ self.addEventListener('activate', e => {
           return caches.delete(key);
         }
       }));
+    }).then(() => {
+      // Tüm sayfaları kontrol et
+      return self.clients.claim();
     })
   );
-  // Tüm sayfaları kontrol et
-  return self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
@@ -28,7 +29,8 @@ self.addEventListener('fetch', e => {
       // Cache'ten dön, yoksa sunucudan al
       return res || fetch(e.request).then(response => {
         // HTML dosyalarını her zaman güncelle
-        if (e.request.url.includes('.html')) {
+        const url = new URL(e.request.url);
+        if (url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname === './') {
           return caches.open(cacheName).then(cache => {
             cache.put(e.request, response.clone());
             return response;
