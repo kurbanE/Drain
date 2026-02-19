@@ -1,4 +1,4 @@
-const cacheName = 'drain-v9';
+const cacheName = 'drain-v10';
 const assets = ['./', './index.html', './manifest.json', './drain.ico'];
 
 self.addEventListener('install', e => {
