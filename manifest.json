@@ -1,8 +1,11 @@
 {
   "name": "Drain App",
   "short_name": "Drain",
-  "start_url": "index.html",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#1a73e8",
   "share_target": {

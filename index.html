@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -124,17 +125,18 @@
         <h2 style="color: #2e7d32; border-bottom:1px solid #34a853;">📋 GÖREV LİSTESİ (Zaman)</h2>
         <div id="finalTableResult" style="overflow-x:auto;"></div>
         <div id="fleetSummary" class="summary-box"></div>
-        <button class="no-print" onclick="window.print()" style="background:#555; color:white; margin-top:10px;">🖨️ Yazdır / PDF</button>
+        <button class="no-print" onclick="shareWhatsApp('final')" style="background:#25D366; color:white; margin-top:10px;">📲 WhatsApp'ta Paylaş</button>
     </div>
 
     <div class="section alpha-list" id="alphaSection" style="display:none;">
         <h2 style="color: #e65100; border-bottom:1px solid #ff9800;">🔤 KAYIT LİSTESİ (Alfabetik)</h2>
         <div id="alphaTableResult" style="overflow-x:auto;"></div>
+        <button class="no-print" onclick="shareWhatsApp('alpha')" style="background:#25D366; color:white; margin-top:10px;">📲 WhatsApp'ta Paylaş</button>
     </div>
 </div>
 
 <script>
-    let acDb = {}; let atomRows = [];
+    let acDb = {}; let atomRows = []; let finalData = [];
 
     async function pasteTo(id) {
         try { const text = await navigator.clipboard.readText(); document.getElementById(id).value = text; } 
@@ -163,7 +165,10 @@
                 for(let j=i; j<Math.min(i+20, lines.length); j++) {
                     if(lines[j] && lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
                 }
-                if (isNeg) { acDb[reg] = type.toUpperCase(); if(!regs.includes(reg)) regs.push(reg); }
+                if (isNeg && !type.toUpperCase().match(/\bA35/)) {
+                    acDb[reg] = type.toUpperCase();
+                    if(!regs.includes(reg)) regs.push(reg);
+                }
             }
         }
         document.getElementById('ttmsOutput').value = regs.join(', ');
@@ -248,7 +253,8 @@
     function finalizePlan() {
         const pNames = Array.from(document.querySelectorAll('.person-input')).map(i => i.value || "İsimsiz");
         const selectedRows = atomRows.filter(r => r.selected && r.currentDrain !== "");
-        let airbusCount = 0, boeingCount = 0, finalData = [];
+        let airbusCount = 0, boeingCount = 0;
+        finalData = [];
         let html = `<table><tr><th>Park</th><th>Uçak</th><th>Kalkış</th><th>Drain</th><th>Personel</th></tr>`;
         selectedRows.forEach((row, i) => {
             const pName = pNames[i % pNames.length];
@@ -271,6 +277,36 @@
         document.getElementById('fleetSummary').innerHTML = `<span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span>`;
         document.getElementById('finalSection').style.display = 'block';
         document.getElementById('alphaSection').style.display = 'block';
+    }
+
+    function shareWhatsApp(type) {
+        if (finalData.length === 0) { alert("Önce listeyi oluşturun."); return; }
+        const date = new Date().toLocaleDateString('tr-TR');
+        let text = "";
+        if (type === 'final') {
+            text = "📋 GÖREV LİSTESİ - " + date + "\n";
+            text += "─────────────────────\n";
+            finalData.forEach(row => {
+                text += "✈️ " + row.reg.toUpperCase().replace("TC","TC-") + "\n";
+                text += "   Kalkış : " + row.dep + "\n";
+                text += "   Drain  : " + row.currentDrain + "\n";
+                text += "   Personel: " + row.pName + "\n";
+                text += "\n";
+            });
+            text += "─────────────────────\n";
+            text += document.getElementById('fleetSummary').innerText;
+        } else {
+            text = "🔤 KAYIT LİSTESİ - " + date + "\n";
+            text += "─────────────────────\n";
+            const sorted = [...finalData].sort((a, b) => a.reg.localeCompare(b.reg));
+            sorted.forEach(row => {
+                text += "✈️ " + row.reg.toUpperCase().replace("TC","TC-") + "\n";
+                text += "   Drain  : " + row.currentDrain + "\n";
+                text += "   Personel: " + row.pName + "\n";
+                text += "\n";
+            });
+        }
+        window.open("https://wa.me/?text=" + encodeURIComponent(text), '_blank');
     }
 
     // Service Worker kaydı ve otomatik güncelleme
