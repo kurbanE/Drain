@@ -15,6 +15,7 @@
     <meta name="apple-mobile-web-app-title" content="Drain">
     <meta name="theme-color" content="#1a73e8">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; padding: 15px; color: #333; margin:0; }
         .container { max-width: 1200px; margin: auto; }
@@ -23,6 +24,15 @@
         
         .grid-inputs { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 768px) { .grid-inputs { grid-template-columns: 1fr 1fr; } }
+        /* Desktop: make output area span both columns; Mobile: it will appear between inputs */
+        .grid-inputs .output-area { grid-column: 1 / -1; }
+
+        @media (max-width: 600px) {
+            #ttmsInput, #atomInput { height: 80px; }
+            #ttmsOutput { height: 36px; font-size: 12px; padding:6px; }
+            .grid-inputs { grid-template-columns: 1fr; }
+            .grid-inputs .output-area { grid-column: auto; }
+        }
 
         .btn-mini { padding: 5px 10px; font-size: 12px; margin-bottom: 5px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
         textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; box-sizing: border-box; font-family: monospace; font-size: 13px; }
@@ -78,6 +88,17 @@
 <div id="floatingCounter">Seçili: 0</div>
 
 <div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-weight:700; color:#1a73e8;">Drain Operasyon Merkezi</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <div id="updateBanner" style="display:none; background:#fff3cd; color:#856404; padding:6px 10px; border-radius:6px; border:1px solid #ffeeba; font-size:13px;">
+                Uygulama güncellendi: <strong id="appVersionLabel">drain-v12</strong>
+                <button class="btn-mini" style="margin-left:8px;" onclick="document.getElementById('updateBanner').style.display='none'">Kapat</button>
+            </div>
+            <button class="btn-mini" onclick="openGuide()">📘 Kullanım Kılavuzu</button>
+        </div>
+    </div>
+
     <div class="section no-print">
         <h2>1️⃣ Veri Girişi</h2>
         <div class="grid-inputs">
@@ -91,6 +112,7 @@
                 </div>
                 <textarea id="ttmsInput" placeholder="TTMS verisini yapıştırın..."></textarea>
                 <button class="btn-blue" onclick="analyzeTTMS()">Analiz Et</button>
+                <p style="font-size:12px; color:#666; margin-top:8px;">Not: TTMS sayfa sayfa 100 kayıt gösteriyor. Her sayfa için yapıştırıp "Analiz Et" deyin; <strong>EXPIRED</strong> olan tesciller tek bir filtre listesinde birikecektir.</p>
             </div>
             <div>
                 <div style="display:flex; justify-content: space-between;">
@@ -101,12 +123,20 @@
                     </div>
                 </div>
                 <textarea id="atomInput" placeholder="Atom tablosunu yapıştırın..."></textarea>
-                <button class="btn-green" onclick="renderDraft()">Havuz Oluştur</button>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+                    <input type="file" id="atomFile" accept=".xls,.xlsx,.csv,.txt" onchange="handleAtomFileSelect(event)" style="flex:1;" />
+                    <button class="btn-green" onclick="renderDraft()">Havuz Oluştur</button>
+                </div>
+                <p style="font-size:12px; color:#666; margin-top:6px;">Not: `.xls` veya `.xlsx` seçerseniz tarayıcıda okunur ve otomatik olarak Atom tablosuna aktarılır.</p>
             </div>
         </div>
-        <div id="outputArea" style="display:none;">
-            <p style="font-size:12px; margin:10px 0 5px 0;"><strong>Filtre Listesi (Tıkla Kopyala):</strong></p>
+        <div class="output-area" id="outputArea" style="display:none;">
+            <p style="font-size:12px; margin:6px 0 5px 0;"><strong>Filtre Listesi (Tıkla Kopyala):</strong></p>
             <textarea id="ttmsOutput" readonly onclick="copyOutput()"></textarea>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+                <button class="btn-mini" onclick="clearFilter()">🔄 Filtreyi Temizle</button>
+                <button class="btn-mini" onclick="copyOutput()">📋 Kopyala</button>
+            </div>
         </div>
     </div>
 
@@ -142,7 +172,58 @@
 </div>
 
 <script>
-    let acDb = {}; let atomRows = []; let finalData = [];
+    /* Guide modal */
+    const appVersion = 'drain-v12';
+    function openGuide() {
+        let m = document.getElementById('guideModal');
+        if (!m) {
+            m = document.createElement('div'); m.id = 'guideModal';
+            m.innerHTML = `
+            <div class="modal-backdrop" onclick="closeGuide()"></div>
+            <div class="modal-content">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0">Kullanım Kılavuzu</h3>
+                    <button class="btn-mini" onclick="closeGuide()">Kapat</button>
+                </div>
+                <div style="margin-top:10px; font-size:13px; line-height:1.4;">
+                    <p>1) TTMS sayfası: <a href="https://ttms2.thyteknik.com.tr/limas/page/programs/fuel-water-tracking" target="_blank">TTMS - Water Drain</a></p>
+                    <ol>
+                        <li>"Items per page:" değerini 100 yapın.</li>
+                        <li>1. sayfada tümünü seçip kopyalayın, sonra Drain uygulamasına dönüp <strong>TTMS Verisi</strong> alanına yapıştırın ve <strong>Analiz Et</strong> tuşuna basın.</li>
+                        <li>2., 3., ... sayfalar için aynı işlemi tekrarlayın; her sayfada "Analiz Et" yapıldığında <strong>EXPIRED</strong> tescilleri uygulamada birikerek tek bir listede toplanır.</li>
+                    </ol>
+                    <p>2) Filtre Listesi: Uygulamadaki "Filtre Listesi (Tıkla Kopyala)" alanından listeyi kopyalayın.</p>
+                    <p>3) Atom sayfası: Atom sayfasını açın, <strong>REG</strong> kısmına kopyaladığınız içeriği yapıştırın, tarih/saat filtresini ayarlayın, <strong>Filter</strong> ve sonra <strong>Export</strong> ile .xls dosyasını indirin.</p>
+                    <p>4) XLS aktarma: İndirdiğiniz .xls dosyasını açıp içeriği kopyalayın ve Drain uygulamasındaki <strong>Atom Tablosu</strong> alanına yapıştırın veya doğrudan <strong>Dosya seç</strong> ile yükleyin. Ardından <strong>Havuz Oluştur</strong> tuşuna basın ve planlamayı tamamlayın.</p>
+                    <p style="color:#666; font-size:12px; margin-top:8px;">Not: Her sayfa için Analiz yaptığınızda sistem tekrarlayan tescilleri tekrar eklemez. .xls/.xlsx dosya isimleri değişse bile içerik okunur.</p>
+                </div>
+            </div>`;
+            document.body.appendChild(m);
+        }
+        document.getElementById('guideModal').style.display = 'block';
+    }
+    function closeGuide() { const m = document.getElementById('guideModal'); if (m) m.style.display = 'none'; }
+
+    // Inject modal styles once
+    (function(){
+        if (document.getElementById('guideModalStyles')) return;
+        const s = document.createElement('style'); s.id = 'guideModalStyles';
+        s.innerHTML = `
+            #guideModal { position:fixed; inset:0; display:none; z-index:99999; }
+            #guideModal .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); }
+            #guideModal .modal-content { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:90%; max-width:720px; background:white; border-radius:8px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); }
+            @media (max-width:600px) { #guideModal .modal-content { width:95%; padding:12px; } }
+        `;
+        document.head.appendChild(s);
+    })();
+
+    // show update banner briefly on load
+    window.addEventListener('load', () => {
+        const b = document.getElementById('updateBanner');
+        const v = document.getElementById('appVersionLabel');
+        if (b && v) { v.innerText = appVersion; b.style.display = 'inline-block'; setTimeout(()=>{ b.style.display='none'; }, 6000); }
+    });
+    let acDb = {}; let atomRows = []; let finalData = []; let allRegs = new Set();
 
     async function pasteTo(id) {
         try { const text = await navigator.clipboard.readText(); document.getElementById(id).value = text; } 
@@ -155,10 +236,17 @@
         alert("Kopyalandı!");
     }
 
+    function clearFilter() {
+        if (!confirm('Filtre listesini temizlemek istediğinize emin misiniz?')) return;
+        allRegs = new Set(); acDb = {}; document.getElementById('ttmsOutput').value = '';
+        alert('Filtre temizlendi.');
+    }
+
     function analyzeTTMS() {
         const input = document.getElementById('ttmsInput').value;
+        if (!input || !input.trim()) { alert('TTMS verisi boş.'); return; }
         const lines = input.split('\n');
-        acDb = {}; let regs = [];
+        let newRegs = [];
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             let regMatch = line.match(/TC-?[A-Z]{3}/i);
@@ -167,18 +255,33 @@
                 let type = "";
                 if (i > 0 && lines[i-1].match(/A31|A32|A33|A35|B7/i)) type = lines[i-1];
                 if (!type && line.match(/A31|A32|A33|A35|B7/i)) type = line;
-                let isNeg = false;
-                for(let j=i; j<Math.min(i+20, lines.length); j++) {
-                    if(lines[j] && lines[j].includes("-") && lines[j].match(/-\d+:\d+/)) { isNeg = true; break; }
+                let isExpired = false;
+                for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+                    const l = (lines[j]||"").toUpperCase();
+                    if (!l) continue;
+                    if (l.includes('EXPIRED')) { isExpired = true; break; }
+                    if (l.match(/-\d{1,2}:\d{2}/)) { isExpired = true; break; }
                 }
-                if (isNeg && !type.toUpperCase().match(/\bA35/)) {
-                    acDb[reg] = type.toUpperCase();
-                    if(!regs.includes(reg)) regs.push(reg);
+                if (isExpired) {
+                    const parsedType = (type || "").toUpperCase();
+                    // If parsed type explicitly says A35, skip adding that type (preserve old behavior)
+                    if (parsedType && parsedType.match(/\bA35/)) {
+                        // skip this reg entirely
+                    } else {
+                        // do not overwrite an existing type with an empty one
+                        if (parsedType) acDb[reg] = parsedType;
+                        else if (!(reg in acDb)) acDb[reg] = "";
+                        if (!allRegs.has(reg)) { allRegs.add(reg); newRegs.push(reg); }
+                    }
                 }
             }
         }
-        document.getElementById('ttmsOutput').value = regs.join(', ');
+        if (newRegs.length === 0) {
+            alert('Bu sayfada "EXPIRED" kaydı bulunamadı veya zaten eklenmiş.');
+        }
+        document.getElementById('ttmsOutput').value = Array.from(allRegs).join(', ');
         document.getElementById('outputArea').style.display = 'block';
+        document.getElementById('ttmsInput').value = '';
     }
 
     function toMin(t) { const p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); }
@@ -216,6 +319,35 @@
         document.getElementById('personnelSection').style.display = 'block';
         generatePersonInputs();
         updateCounter();
+    }
+
+    async function handleAtomFileSelect(evt) {
+        const f = evt.target.files && evt.target.files[0];
+        if (!f) return;
+        try { await parseAtomFile(f); }
+        catch (err) { alert('Dosya okunamadı: ' + err); }
+    }
+
+    async function parseAtomFile(file) {
+        const name = (file.name||'').toLowerCase();
+        if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
+            const ab = await file.arrayBuffer();
+            const wb = XLSX.read(ab, {type: 'array'});
+            const sh = wb.SheetNames[0];
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[sh], {header:1, raw:false});
+            const lines = rows.map(r => r.map(c => (c===undefined? '': String(c))).join('\t')).filter(l=>l.trim());
+            document.getElementById('atomInput').value = lines.join('\n');
+            renderDraft();
+            return;
+        }
+        // csv or txt
+        const txt = await file.text();
+        let lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+        if (lines.length && lines[0].includes(',') && !lines[0].includes('\t')) {
+            lines = lines.map(l => l.split(',').map(s=>s.trim()).join('\t'));
+        }
+        document.getElementById('atomInput').value = lines.join('\n');
+        renderDraft();
     }
 
     function calculateTimes() {
