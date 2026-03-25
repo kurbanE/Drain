@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Drain Operasyon Merkezi V7.1</title>
+    <title>Drain Operasyon Merkezi V8.0</title>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -92,7 +92,7 @@
         <div style="font-weight:700; color:#1a73e8;">Drain Operasyon Merkezi</div>
         <div style="display:flex; gap:8px; align-items:center;">
             <div id="updateBanner" style="display:none; background:#fff3cd; color:#856404; padding:6px 10px; border-radius:6px; border:1px solid #ffeeba; font-size:13px;">
-                Uygulama güncellendi: <strong id="appVersionLabel">drain-v12</strong>
+                Uygulama güncellendi: <strong id="appVersionLabel">drain-v8.0</strong>
                 <button class="btn-mini" style="margin-left:8px;" onclick="document.getElementById('updateBanner').style.display='none'">Kapat</button>
             </div>
             <button class="btn-mini" onclick="openGuide()">📘 Kullanım Kılavuzu</button>
@@ -112,7 +112,7 @@
                 </div>
                 <textarea id="ttmsInput" placeholder="TTMS verisini yapıştırın..."></textarea>
                 <button class="btn-blue" onclick="analyzeTTMS()">Analiz Et</button>
-                <p style="font-size:12px; color:#666; margin-top:8px;">Not: TTMS sayfa sayfa 100 kayıt gösteriyor. Her sayfa için yapıştırıp "Analiz Et" deyin; <strong>EXPIRED</strong> olan tesciller tek bir filtre listesinde birikecektir.</p>
+                <p style="font-size:12px; color:#666; margin-top:8px;">Not: TTMS sayfa sayfa 100 kayıt gösteriyor. Her sayfa için yapıştırıp "Analiz Et" deyin; <strong>-72 saat ve üzeri</strong> olan tesciller tek bir filtre listesinde birikecektir.</p>
             </div>
             <div>
                 <div style="display:flex; justify-content: space-between;">
@@ -173,7 +173,7 @@
 
 <script>
     /* Guide modal */
-    const appVersion = 'drain-v12';
+    const appVersion = 'drain-v8.0';
     function openGuide() {
         let m = document.getElementById('guideModal');
         if (!m) {
@@ -190,7 +190,7 @@
                     <ol>
                         <li>"Items per page:" değerini 100 yapın.</li>
                         <li>1. sayfada tümünü seçip kopyalayın, sonra Drain uygulamasına dönüp <strong>TTMS Verisi</strong> alanına yapıştırın ve <strong>Analiz Et</strong> tuşuna basın.</li>
-                        <li>2., 3., ... sayfalar için aynı işlemi tekrarlayın; her sayfada "Analiz Et" yapıldığında <strong>EXPIRED</strong> tescilleri uygulamada birikerek tek bir listede toplanır.</li>
+                        <li>2., 3., ... sayfalar için aynı işlemi tekrarlayın; her sayfada "Analiz Et" yapıldığında <strong>-72:00 ve üzeri (gecikmiş)</strong> tescilleri uygulamada birikerek tek bir listede toplanır.</li>
                     </ol>
                     <p>2) Filtre Listesi: Uygulamadaki "Filtre Listesi (Tıkla Kopyala)" alanından listeyi kopyalayın.</p>
                     <p>3) Atom sayfası: Atom sayfasını açın, <strong>REG</strong> kısmına kopyaladığınız içeriği yapıştırın, tarih/saat filtresini ayarlayın, <strong>Filter</strong> ve sonra <strong>Export</strong> ile .xls dosyasını indirin.</p>
@@ -255,20 +255,26 @@
                 let type = "";
                 if (i > 0 && lines[i-1].match(/A31|A32|A33|A35|B7/i)) type = lines[i-1];
                 if (!type && line.match(/A31|A32|A33|A35|B7/i)) type = line;
+                
                 let isExpired = false;
                 for (let j = i; j < Math.min(i + 20, lines.length); j++) {
                     const l = (lines[j]||"").toUpperCase();
                     if (!l) continue;
                     if (l.includes('EXPIRED')) { isExpired = true; break; }
-                    if (l.match(/-\d{1,2}:\d{2}/)) { isExpired = true; break; }
+                    
+                    // - Saat Kontrolü: -72:00 ve üstü
+                    let timeMatch = l.match(/-(\d+):(\d{2})/);
+                    if (timeMatch) {
+                        let hours = parseInt(timeMatch[1]);
+                        if (hours >= 72) { isExpired = true; break; }
+                    }
                 }
+
                 if (isExpired) {
                     const parsedType = (type || "").toUpperCase();
-                    // If parsed type explicitly says A35, skip adding that type (preserve old behavior)
                     if (parsedType && parsedType.match(/\bA35/)) {
-                        // skip this reg entirely
+                        // A35 tescillerini atla (mevcut mantık korunmuştur)
                     } else {
-                        // do not overwrite an existing type with an empty one
                         if (parsedType) acDb[reg] = parsedType;
                         else if (!(reg in acDb)) acDb[reg] = "";
                         if (!allRegs.has(reg)) { allRegs.add(reg); newRegs.push(reg); }
@@ -277,7 +283,7 @@
             }
         }
         if (newRegs.length === 0) {
-            alert('Bu sayfada "EXPIRED" kaydı bulunamadı veya zaten eklenmiş.');
+            alert('Bu sayfada -72 saat ve üzeri gecikmiş kayıt bulunamadı veya zaten eklenmiş.');
         }
         document.getElementById('ttmsOutput').value = Array.from(allRegs).join(', ');
         document.getElementById('outputArea').style.display = 'block';
@@ -287,7 +293,6 @@
     function toMin(t) { const p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); }
     function toTime(m) { return String(Math.floor(m/60)).padStart(2,'0')+":"+String(m%60).padStart(2,'0'); }
 
-    // SAYAÇ GÜNCELLEME (Slotu olmayanları saymaz)
     function updateCounter() {
         const count = atomRows.filter(r => r.selected && r.currentDrain !== "").length;
         const counterEl = document.getElementById('floatingCounter');
@@ -306,7 +311,6 @@
             let reg = "", depTime = "", park = cols[2] || "-";
             for (let c of cols) {
                 if (c.match(/TC-?[A-Z]{3}/i)) reg = c.replace("-", "").toLowerCase();
-                // YILDIZLI SAAT DÜZENLEMESİ
                 if (c.match(/^\d{2}:\d{2}\*?$/)) depTime = c.replace('*', '');
             }
             if (reg && depTime && !seen.has(reg)) {
@@ -340,7 +344,6 @@
             renderDraft();
             return;
         }
-        // csv or txt
         const txt = await file.text();
         let lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
         if (lines.length && lines[0].includes(',') && !lines[0].includes('\t')) {
@@ -447,15 +450,12 @@
         window.open("https://wa.me/?text=" + encodeURIComponent(text), '_blank');
     }
 
-    // Service Worker kaydı ve otomatik güncelleme
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
-            // Yeni güncelleme varsa otomatik yükle
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Yeni sürüm hazır, sayfayı yenile
                         if (confirm('Yeni versiyon mevcut! Sayfayı yenilemek ister misiniz?')) {
                             window.location.reload();
                         }
