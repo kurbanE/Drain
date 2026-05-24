@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Drain Operasyon Merkezi V8.0</title>
+    <title>Drain Operasyon Merkezi V8.6</title>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,9 +22,11 @@
         .section { background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         h2, h3 { margin-top: 0; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; font-size: 1.1em; }
         
+        .section-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; margin-bottom: 12px; }
+        .section-header-flex h2, .section-header-flex h3 { border-bottom: none; margin: 0; padding-bottom: 0; }
+
         .grid-inputs { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 768px) { .grid-inputs { grid-template-columns: 1fr 1fr; } }
-        /* Desktop: make output area span both columns; Mobile: it will appear between inputs */
         .grid-inputs .output-area { grid-column: 1 / -1; }
 
         @media (max-width: 600px) {
@@ -34,36 +36,42 @@
             .grid-inputs .output-area { grid-column: auto; }
         }
 
-        .btn-mini { padding: 5px 10px; font-size: 12px; margin-bottom: 5px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+        .btn-mini { padding: 5px 10px; font-size: 12px; margin-bottom: 5px; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-mini:hover { background: #e0e0e0; }
+        .btn-whatsapp-header { background: #25D366 !important; color: white !important; border: none !important; font-weight: bold; }
+        .btn-whatsapp-header:hover { background: #20ba5a !important; }
+        
         textarea { width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; box-sizing: border-box; font-family: monospace; font-size: 13px; }
         
         #ttmsOutput { background: #e8f0fe; color: #1a73e8; font-weight: bold; border: 1px solid #1a73e8; margin-top: 10px; height: 50px; width: 100%; cursor: pointer; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: white; }
-        th, td { border: 1px solid #eee; padding: 8px; text-align: center; }
-        th { background: #f8f9fa; color: #555; }
+        /* OPTİMİZE TABLO: Yazı boyutu 11px, hücre paddingleri daraltıldı, kaymalar tamamen engellendi */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; background: white; table-layout: auto; }
+        th, td { border: 1px solid #eee; padding: 6px 2px; text-align: center; word-break: keep-all; white-space: nowrap; }
+        th { background: #f8f9fa; color: #555; font-weight: 600; }
         
         tr.conflict { background-color: #fff0f0; color: #d32f2f; } 
         tr.unselected { opacity: 0.4; background: #fafafa; } 
 
-        .type-a32 { color: blue; font-weight: bold; } 
-        .type-a33 { color: red; font-weight: bold; }  
-        .type-b7 { color: black; font-weight: bold; } 
+        .type-a32 { color: blue; font-weight: bold; white-space: nowrap; } 
+        .type-a33 { color: red; font-weight: bold; white-space: nowrap; }  
+        .type-b7 { color: black; font-weight: bold; white-space: nowrap; } 
 
         .person-input-group { display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap; align-items: center; }
         .person-input { padding: 8px; border: 1px solid #1a73e8; border-radius: 4px; flex: 1; min-width: 120px; }
         
         .final-list { border: 2px solid #34a853; background: #fafffa !important; }
-        .alpha-list { border: 2px solid #ff9800; background: #fffcf5 !important; }
         
-        .badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; background: #1a73e8; color: white; }
-        .summary-box { margin-top: 10px; padding: 10px; background: #eef7ee; border-radius: 6px; border: 1px solid #c8e6c9; font-size: 14px; }
+        .badge { padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; background: #1a73e8; color: white; display: inline-block; }
+        .summary-box { margin-top: 10px; padding: 12px; background: #eef7ee; border-radius: 6px; border: 1px solid #c8e6c9; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .summary-box:hover { background: #e2f3e2; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
         button { cursor: pointer; padding: 12px; border-radius: 4px; border: none; font-weight: bold; transition: 0.3s; width: 100%; margin-top: 5px; }
         .btn-blue { background: #1a73e8; color: white; }
         .btn-green { background: #34a853; color: white; }
 
-        /* YÜZEN SAYAÇ STİLİ */
+        .select-interval { padding: 6px 10px; border-radius: 4px; border: 1px solid #1a73e8; font-weight: bold; color: #1a73e8; background: white; cursor: pointer; }
+
         #floatingCounter {
             position: fixed;
             top: 20px;
@@ -80,7 +88,7 @@
             font-size: 16px;
         }
 
-        @media print { .no-print { display: none; } .final-list, .alpha-list { border: none; box-shadow: none; } #floatingCounter { display: none !important; } }
+        @media print { .no-print { display: none; } .final-list { border: none; box-shadow: none; } #floatingCounter { display: none !important; } }
     </style>
 </head>
 <body>
@@ -92,7 +100,7 @@
         <div style="font-weight:700; color:#1a73e8;">Drain Operasyon Merkezi</div>
         <div style="display:flex; gap:8px; align-items:center;">
             <div id="updateBanner" style="display:none; background:#fff3cd; color:#856404; padding:6px 10px; border-radius:6px; border:1px solid #ffeeba; font-size:13px;">
-                Uygulama güncellendi: <strong id="appVersionLabel">drain-v8.0</strong>
+                Uygulama güncellendi: <strong id="appVersionLabel">drain-v8.6</strong>
                 <button class="btn-mini" style="margin-left:8px;" onclick="document.getElementById('updateBanner').style.display='none'">Kapat</button>
             </div>
             <button class="btn-mini" onclick="openGuide()">📘 Kullanım Kılavuzu</button>
@@ -114,6 +122,16 @@
                 <button class="btn-blue" onclick="analyzeTTMS()">Analiz Et</button>
                 <p style="font-size:12px; color:#666; margin-top:8px;">Not: TTMS sayfa sayfa 100 kayıt gösteriyor. Her sayfa için yapıştırıp "Analiz Et" deyin; <strong>-72 saat ve üzeri</strong> olan tesciller tek bir filtre listesinde birikecektir.</p>
             </div>
+
+            <div class="output-area" id="outputArea" style="display:none;">
+                <p style="font-size:12px; margin:6px 0 5px 0;"><strong>Filtre Listesi (Tıkla Kopyala):</strong></p>
+                <textarea id="ttmsOutput" readonly onclick="copyOutput()"></textarea>
+                <div style="display:flex; gap:8px; margin-top:6px;">
+                    <button class="btn-mini" onclick="clearFilter()">🔄 Filtreyi Temizle</button>
+                    <button class="btn-mini" onclick="copyOutput()">📋 Kopyala</button>
+                </div>
+            </div>
+
             <div>
                 <div style="display:flex; justify-content: space-between;">
                     <strong>Atom Tablosu:</strong>
@@ -130,18 +148,23 @@
                 <p style="font-size:12px; color:#666; margin-top:6px;">Not: `.xls` veya `.xlsx` seçerseniz tarayıcıda okunur ve otomatik olarak Atom tablosuna aktarılır.</p>
             </div>
         </div>
-        <div class="output-area" id="outputArea" style="display:none;">
-            <p style="font-size:12px; margin:6px 0 5px 0;"><strong>Filtre Listesi (Tıkla Kopyala):</strong></p>
-            <textarea id="ttmsOutput" readonly onclick="copyOutput()"></textarea>
-            <div style="display:flex; gap:8px; margin-top:6px;">
-                <button class="btn-mini" onclick="clearFilter()">🔄 Filtreyi Temizle</button>
-                <button class="btn-mini" onclick="copyOutput()">📋 Kopyala</button>
-            </div>
-        </div>
     </div>
 
     <div class="section no-print" id="draftSection" style="display:none;">
-        <h3>2️⃣ Planlama Havuzu</h3>
+        <div class="section-header-flex">
+            <h3>2️⃣ Planlama Havuzu</h3>
+            <div style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                <strong>Aralık (Dk):</strong>
+                <select id="drainInterval" class="select-interval" onchange="calculateTimes()">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="25">25</option>
+                    <option value="30">30</option>
+                </select>
+            </div>
+        </div>
         <div id="draftTableResult" style="overflow-x:auto;"></div>
     </div>
 
@@ -158,22 +181,21 @@
     </div>
 
     <div class="section final-list" id="finalSection" style="display:none;">
-        <h2 style="color: #2e7d32; border-bottom:1px solid #34a853;">📋 GÖREV LİSTESİ (Zaman)</h2>
+        <div class="section-header-flex">
+            <h2 style="color: #2e7d32;">📋 UÇAK LİSTESİ</h2>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-mini btn-whatsapp-header no-print" onclick="shareWhatsApp('final')">📲 WhatsApp'ta Paylaş</button>
+                <button class="btn-mini no-print" onclick="copyFormattedTaskList()">📋 Listeyi Kopyala (Uçak Park Drain)</button>
+            </div>
+        </div>
         <div id="finalTableResult" style="overflow-x:auto;"></div>
-        <div id="fleetSummary" class="summary-box"></div>
-        <button class="no-print" onclick="shareWhatsApp('final')" style="background:#25D366; color:white; margin-top:10px;">📲 WhatsApp'ta Paylaş</button>
-    </div>
-
-    <div class="section alpha-list" id="alphaSection" style="display:none;">
-        <h2 style="color: #e65100; border-bottom:1px solid #ff9800;">🔤 KAYIT LİSTESİ (Alfabetik)</h2>
-        <div id="alphaTableResult" style="overflow-x:auto;"></div>
-        <button class="no-print" onclick="shareWhatsApp('alpha')" style="background:#25D366; color:white; margin-top:10px;">📲 WhatsApp'ta Paylaş</button>
+        <div id="fleetSummary" class="summary-box" onclick="copySummaryText()" title="Kopyalamak için tıklayın"></div>
     </div>
 </div>
 
 <script>
     /* Guide modal */
-    const appVersion = 'drain-v8.0';
+    const appVersion = 'drain-v8.6';
     function openGuide() {
         let m = document.getElementById('guideModal');
         if (!m) {
@@ -204,7 +226,6 @@
     }
     function closeGuide() { const m = document.getElementById('guideModal'); if (m) m.style.display = 'none'; }
 
-    // Inject modal styles once
     (function(){
         if (document.getElementById('guideModalStyles')) return;
         const s = document.createElement('style'); s.id = 'guideModalStyles';
@@ -217,7 +238,6 @@
         document.head.appendChild(s);
     })();
 
-    // show update banner briefly on load
     window.addEventListener('load', () => {
         const b = document.getElementById('updateBanner');
         const v = document.getElementById('appVersionLabel');
@@ -262,7 +282,6 @@
                     if (!l) continue;
                     if (l.includes('EXPIRED')) { isExpired = true; break; }
                     
-                    // - Saat Kontrolü: -72:00 ve üstü
                     let timeMatch = l.match(/-(\d+):(\d{2})/);
                     if (timeMatch) {
                         let hours = parseInt(timeMatch[1]);
@@ -273,7 +292,7 @@
                 if (isExpired) {
                     const parsedType = (type || "").toUpperCase();
                     if (parsedType && parsedType.match(/\bA35/)) {
-                        // A35 tescillerini atla (mevcut mantık korunmuştur)
+                        // A35 atla
                     } else {
                         if (parsedType) acDb[reg] = parsedType;
                         else if (!(reg in acDb)) acDb[reg] = "";
@@ -355,13 +374,17 @@
 
     function calculateTimes() {
         let usedSlots = [];
-        let html = `<table><tr><th>Seç</th><th>Uçak</th><th>Kalkış</th><th>Drain</th></tr>`;
+        const intervalInput = document.getElementById('drainInterval');
+        const step = intervalInput ? parseInt(intervalInput.value) : 10;
+
+        /* Başlık "Park" olarak kısaltıldı ve genişlik dengelendi */
+        let html = `<table><tr><th style="width:30px;">Seç</th><th>Uçak</th><th style="width:50px;">Park</th><th>Kalkış</th><th>Drain</th></tr>`;
         atomRows.forEach((row, idx) => {
             let drainTime = "";
             if (row.selected) {
-                let start = Math.floor((row.depMin - 60) / 10) * 10;
-                let end = Math.floor((row.depMin - 30) / 10) * 10;
-                for (let t = start; t <= end; t += 10) {
+                let start = Math.floor((row.depMin - 60) / step) * step;
+                let end = Math.floor((row.depMin - 30) / step) * step;
+                for (let t = start; t <= end; t += step) {
                     if (!usedSlots.includes(t)) { drainTime = toTime(t); usedSlots.push(t); break; }
                 }
             }
@@ -369,11 +392,16 @@
             const typeStr = acDb[row.reg] || "";
             const typeClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
             html += `<tr class="${!row.selected ? 'unselected' : (drainTime === '' ? 'conflict' : '')}">
-                <td><input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRow(${idx})"></td>
+                <td style="width:30px;"><input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRow(${idx})"></td>
                 <td class="${typeClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
+                <td style="width:50px;">${row.park || '-'}</td>
                 <td>${row.dep}</td><td>${drainTime || "Slot Yok"}</td></tr>`;
         });
         document.getElementById('draftTableResult').innerHTML = html + "</table>";
+        
+        if (document.getElementById('finalSection').style.display === 'block') {
+            finalizePlan();
+        }
     }
 
     function toggleRow(idx) { 
@@ -396,57 +424,66 @@
         const selectedRows = atomRows.filter(r => r.selected && r.currentDrain !== "");
         let airbusCount = 0, boeingCount = 0;
         finalData = [];
-        let html = `<table><tr><th>Park</th><th>Uçak</th><th>Kalkış</th><th>Drain</th><th>Personel</th></tr>`;
+        /* Kesin listedeki başlık da "Park" olarak optimize edildi */
+        let html = `<table><tr><th style="width:50px;">Park</th><th>Uçak</th><th>Kalkış</th><th>Drain</th><th>Personel</th></tr>`;
         selectedRows.forEach((row, i) => {
             const pName = pNames[i % pNames.length];
             const typeStr = acDb[row.reg] || "";
             let tClass = (typeStr.includes("A31") || typeStr.includes("A32")) ? "type-a32" : (typeStr.includes("A3") ? "type-a33" : "type-b7");
             if (typeStr.includes("A3")) airbusCount++; else boeingCount++;
             finalData.push({...row, pName, tClass});
-            html += `<tr><td>${row.park}</td><td class="${tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
+            html += `<tr><td style="width:50px;">${row.park}</td><td class="${tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
                 <td>${row.dep}</td><td style="font-weight:bold; color:#2e7d32">${row.currentDrain}</td>
                 <td><span class="badge">${pName}</span></td></tr>`;
         });
         document.getElementById('finalTableResult').innerHTML = html + "</table>";
-        const alphaRows = [...finalData].sort((a, b) => a.reg.localeCompare(b.reg));
-        let alphaHtml = `<table><tr><th>Uçak</th><th>Drain</th><th>Personel</th></tr>`;
-        alphaRows.forEach(row => {
-            alphaHtml += `<tr><td class="${row.tClass}">${row.reg.toUpperCase().replace("TC","TC-")}</td>
-                <td style="font-weight:bold;">${row.currentDrain}</td><td>${row.pName}</td></tr>`;
-        });
-        document.getElementById('alphaTableResult').innerHTML = alphaHtml + "</table>";
-        document.getElementById('fleetSummary').innerHTML = `<span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span>`;
+        document.getElementById('fleetSummary').innerHTML = `<div><span>✈️ Airbus: <font color="blue">${airbusCount}</font></span> | <span>✈️ Boeing: <b>${boeingCount}</b></span> | <span>📊 Toplam: ${selectedRows.length}</span></div> <span style="font-size:12px; color:#1a73e8; font-weight:bold;">📋 Kopyala</span>`;
         document.getElementById('finalSection').style.display = 'block';
-        document.getElementById('alphaSection').style.display = 'block';
+    }
+
+    function copySummaryText() {
+        const box = document.getElementById('fleetSummary');
+        if (!box) return;
+        let text = box.innerText.replace("📋 Kopyala", "").trim();
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Uçak Özet İstatistikleri Kopyalandı:\n" + text);
+        });
+    }
+
+    function copyFormattedTaskList() {
+        if (finalData.length === 0) { alert("Önce listeyi oluşturun."); return; }
+        let textArr = [];
+        finalData.forEach(row => {
+            const cleanReg = row.reg.toUpperCase().replace("TC","TC-");
+            const cleanPark = row.park || "-";
+            const cleanDrain = row.currentDrain || "Slot Yok";
+            textArr.push(`${cleanReg} ${cleanPark} ${cleanDrain}`);
+        });
+        
+        const outputText = textArr.join('\n');
+        navigator.clipboard.writeText(outputText).then(() => {
+            alert("Görev listesi (Uçak Park Drain) formatında kopyalandı!");
+        }).catch(err => {
+            alert("Kopyalama başarısız oldu, lütfen manuel seçin.");
+        });
     }
 
     function shareWhatsApp(type) {
         if (finalData.length === 0) { alert("Önce listeyi oluşturun."); return; }
         const date = new Date().toLocaleDateString('tr-TR');
-        let text = "";
-        if (type === 'final') {
-            text = "📋 GÖREV LİSTESİ - " + date + "\n";
-            text += "─────────────────────\n";
-            finalData.forEach(row => {
-                text += "✈️ " + row.reg.toUpperCase().replace("TC","TC-") + "\n";
-                text += "   Kalkış : " + row.dep + "\n";
-                text += "   Drain  : " + row.currentDrain + "\n";
-                text += "   Personel: " + row.pName + "\n";
-                text += "\n";
-            });
-            text += "─────────────────────\n";
-            text += document.getElementById('fleetSummary').innerText;
-        } else {
-            text = "🔤 KAYIT LİSTESİ - " + date + "\n";
-            text += "─────────────────────\n";
-            const sorted = [...finalData].sort((a, b) => a.reg.localeCompare(b.reg));
-            sorted.forEach(row => {
-                text += "✈️ " + row.reg.toUpperCase().replace("TC","TC-") + "\n";
-                text += "   Drain  : " + row.currentDrain + "\n";
-                text += "   Personel: " + row.pName + "\n";
-                text += "\n";
-            });
-        }
+        let text = "📋 UÇAK LİSTESİ - " + date + "\n";
+        text += "─────────────────────\n";
+        finalData.forEach(row => {
+            text += "✈️ " + row.reg.toUpperCase().replace("TC","TC-") + "\n";
+            text += "   Park   : " + (row.park || "-") + "\n";
+            text += "   Kalkış : " + row.dep + "\n";
+            text += "   Drain  : " + row.currentDrain + "\n";
+            text += "   Personel: " + row.pName + "\n";
+            text += "\n";
+        });
+        text += "─────────────────────\n";
+        const summaryText = document.getElementById('fleetSummary').innerText.replace("📋 Kopyala", "").trim();
+        text += summaryText;
         window.open("https://wa.me/?text=" + encodeURIComponent(text), '_blank');
     }
 
